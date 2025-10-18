@@ -52,6 +52,24 @@
                     <p class="text-xs text-gray-500 mt-1">Select from available tags or type a custom filter</p>
                 </div>
 
+                <!-- Year Range Filter (Optional) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Year Range Filter (Optional)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="min-year" class="block text-xs text-gray-600 mb-1">Min Year</label>
+                            <input type="number" id="min-year" placeholder="e.g., -500" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label for="max-year" class="block text-xs text-gray-600 mb-1">Max Year</label>
+                            <input type="number" id="max-year" placeholder="e.g., 2000" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Leave empty for no year restrictions. Use negative numbers for BC years.</p>
+                </div>
+
                 <!-- Start Button -->
                 <button id="start-quiz-btn" 
                         class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02]">
@@ -126,13 +144,9 @@
             </div>
 
             <div class="space-y-3">
-                <button id="restart-same-quiz" 
-                        class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02]">
-                    Try Same Quiz Again
-                </button>
                 <button id="new-quiz-btn" 
                         class="w-full px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition duration-150 transform hover:scale-[1.02]">
-                    Configure New Quiz
+                    Start New Quiz
                 </button>
             </div>
         </div>

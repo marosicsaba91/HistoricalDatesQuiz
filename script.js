@@ -10,7 +10,9 @@ let allData = [];
 let availableTags = [];
 let quizConfig = {
     length: 10,
-    tag: ''
+    tag: '',
+    minYear: null,
+    maxYear: null
 };
 let answerSubmitted = false;
 
@@ -40,6 +42,69 @@ function formatDateForDisplay(year, month, day) {
     
     // If invalid month/day, just return year
     return `${absYear}${era}`;
+}
+
+// Calculate score based on how close the answer is to the correct year
+// Returns a score from 0-10 points based on the difference
+function calculateScore(userAnswer, correctYear) 
+{
+    const difference = Math.abs(userAnswer - correctYear);
+    if (difference === 0) return 10; 
+
+    if(correctYear >= 2000)
+    {
+        if (difference <= 1) return 5;
+        if (difference <= 2) return 2;
+        if (difference <= 5) return 1;
+        return 0;
+    }
+
+    if(correctYear >= 1900)
+    {
+        if (difference <= 1) return 5;
+        if (difference <= 2) return 4;
+        if (difference <= 3) return 3;
+        if (difference <= 5) return 2;
+        if (difference <= 10) return 1;
+        return 0;
+    }
+
+    if(correctYear >= 1500)
+    {
+        if (difference <= 1) return 5;
+        if (difference <= 5) return 4;
+        if (difference <= 10) return 3;
+        if (difference <= 25) return 2;
+        if (difference <= 100) return 1;
+        return 0;
+    }
+
+    if(correctYear >= 0)
+    {
+        if (difference <= 3) return 5;
+        if (difference <= 5) return 4;
+        if (difference <= 10) return 3;
+        if (difference <= 25) return 2; 
+        if (difference <= 100) return 1; 
+        return 0;
+    }
+
+    if(correctYear >= -2000)
+    { 
+        if (difference <= 5) return 5;
+        if (difference <= 10) return 4;
+        if (difference <= 20) return 3;
+        if (difference <= 50) return 2; 
+        if (difference <= 150) return 1; 
+        return 0;
+    }
+
+    if (difference <= 10) return 5; 
+    if (difference <= 50) return 4;
+    if (difference <= 100) return 3; 
+    if (difference <= 250) return 2; 
+    if (difference <= 500) return 1; 
+    return 0;
 }
 
 // Utility to shuffle the array
@@ -198,14 +263,36 @@ async function startQuizWithConfig() {
         // Apply tag filter if specified
         if (quizConfig.tag && quizConfig.tag.trim()) {
             const tagLower = quizConfig.tag.trim().toLowerCase();
-            filteredData = allData.filter(event => 
+            filteredData = filteredData.filter(event => 
                 event[0].toLowerCase().includes(tagLower) || 
                 (event[4] && event[4].toLowerCase().includes(tagLower))
             );
         }
         
+        // Apply year range filter if specified
+        if (quizConfig.minYear !== null || quizConfig.maxYear !== null) {
+            filteredData = filteredData.filter(event => {
+                const eventYear = event[1]; // Year is in index 1
+                let inRange = true;
+                
+                if (quizConfig.minYear !== null && eventYear < quizConfig.minYear) {
+                    inRange = false;
+                }
+                if (quizConfig.maxYear !== null && eventYear > quizConfig.maxYear) {
+                    inRange = false;
+                }
+                
+                return inRange;
+            });
+        }
+        
         if (filteredData.length === 0) {
-            displayError(`No events found matching "${quizConfig.tag}". Please try a different tag or leave it empty.`);
+            const filters = [];
+            if (quizConfig.tag && quizConfig.tag.trim()) filters.push(`tag "${quizConfig.tag}"`);
+            if (quizConfig.minYear !== null) filters.push(`min year ${quizConfig.minYear}`);
+            if (quizConfig.maxYear !== null) filters.push(`max year ${quizConfig.maxYear}`);
+            const filterText = filters.length > 0 ? ` matching ${filters.join(', ')}` : '';
+            displayError(`No events found${filterText}. Please adjust your filters.`);
             return;
         }
         
@@ -271,10 +358,11 @@ function loadQuestion() {
     
     // Update question counter and score
     document.getElementById('question-counter').textContent = `Question ${currentQuestionIndex + 1}/${shuffledData.length}`;
-    document.getElementById('score-display').textContent = `Score: ${score}/${currentQuestionIndex}`;
+    const maxPossiblePoints = currentQuestionIndex * 10; // 10 points per question
+    document.getElementById('score-display').textContent = `Score: ${score}/${maxPossiblePoints} pts`;
     
     document.getElementById('feedback').textContent = "(use negative numbers for BC)";
-    document.getElementById('feedback').classList.remove('text-green-600', 'text-red-600');
+    document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600');
     document.getElementById('feedback').classList.add('text-gray-500');
     
     // Reset input and button state
@@ -303,24 +391,34 @@ function checkAnswer() {
     // Check if input is a valid integer (no decimals, no non-numeric characters)
     if (isNaN(inputNumber) || input.includes('.') || inputNumber.toString() !== input) {
         document.getElementById('feedback').innerHTML = "Please enter a valid integer (whole number only).";
-        document.getElementById('feedback').classList.remove('text-green-600', 'text-gray-500');
+        document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-gray-500');
         document.getElementById('feedback').classList.add('text-red-600');
         return;
     }
 
+    const pointsEarned = calculateScore(inputNumber, correctYear);
     const isCorrect = inputNumber === correctYear;
+    const difference = Math.abs(inputNumber - correctYear);
+
+    score += pointsEarned; // Add points to total score
 
     const feedbackElement = document.getElementById('feedback');
-    feedbackElement.classList.remove('text-green-600', 'text-red-600', 'text-gray-500');
+    feedbackElement.classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600', 'text-gray-500');
 
+    const formattedDate = formatDateForDisplay(correctYear, month, day);
+    
     if (isCorrect) {
-        score++;
-        const formattedDate = formatDateForDisplay(correctYear, month, day);
-        feedbackElement.innerHTML = `Correct!<br><span class="text-lg font-semibold">${formattedDate}</span>`;
+        feedbackElement.innerHTML = `Perfect! ${pointsEarned} points<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-green-600');
+    } else if (pointsEarned >= 4) {
+        feedbackElement.innerHTML = `Close! ${pointsEarned} points (off by ${difference} years)<br><span class="text-lg font-semibold">${formattedDate}</span>`;
+        feedbackElement.classList.add('text-yellow-600');
+    }
+     else if (pointsEarned >= 1) {
+        feedbackElement.innerHTML = `Not too bad! ${pointsEarned} points (off by ${difference} years)<br><span class="text-lg font-semibold">${formattedDate}</span>`;
+        feedbackElement.classList.add('text-orange-600');
     } else {
-        const formattedDate = formatDateForDisplay(correctYear, month, day);
-        feedbackElement.innerHTML = `Incorrect. The correct date was:<br><span class="text-lg font-semibold">${formattedDate}</span>`;
+        feedbackElement.innerHTML = `0 points (off by ${difference} years)<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-red-600');
     }
     
@@ -346,12 +444,13 @@ function showResults() {
     document.getElementById('quiz-content').classList.add('hidden');
     document.getElementById('end-screen').classList.remove('hidden');
     
-    // Calculate percentage
-    const percentage = Math.round((score / shuffledData.length) * 100);
+    // Calculate percentage based on points (max 10 points per question)
+    const maxPossiblePoints = shuffledData.length * 10;
+    const percentage = Math.round((score / maxPossiblePoints) * 100);
     
     // Update score display
-    document.getElementById('final-score').textContent = `${score}/${shuffledData.length}`;
-    document.getElementById('score-percentage').textContent = `${percentage}% Correct`;
+    document.getElementById('final-score').textContent = `${score}/${maxPossiblePoints}`;
+    document.getElementById('score-percentage').textContent = `${percentage}% Score`;
     
     // Show performance message based on score
     const messageElement = document.getElementById('performance-message');
@@ -433,16 +532,26 @@ function setupStartPageHandlers() {
     // Start quiz button
     document.getElementById('start-quiz-btn').addEventListener('click', () => {
         quizConfig.tag = document.getElementById('tag-filter').value.trim();
+        
+        // Capture year range filters
+        const minYearValue = document.getElementById('min-year').value.trim();
+        const maxYearValue = document.getElementById('max-year').value.trim();
+        
+        quizConfig.minYear = minYearValue ? parseInt(minYearValue, 10) : null;
+        quizConfig.maxYear = maxYearValue ? parseInt(maxYearValue, 10) : null;
+        
+        // Validate year range
+        if (quizConfig.minYear !== null && quizConfig.maxYear !== null && quizConfig.minYear > quizConfig.maxYear) {
+            alert('Minimum year cannot be greater than maximum year.');
+            return;
+        }
+        
         startQuizWithConfig();
     });
 }
 
 // Event handlers for end screen
-function setupEndScreenHandlers() {
-    document.getElementById('restart-same-quiz').addEventListener('click', () => {
-        // Restart with same configuration
-        startQuizWithConfig();
-    });
+function setupEndScreenHandlers(){
     
     document.getElementById('new-quiz-btn').addEventListener('click', () => {
         showStartPage();
