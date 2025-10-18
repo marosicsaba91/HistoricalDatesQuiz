@@ -462,11 +462,11 @@ function showResults() {
     } else if (percentage >= 70) {
         message = "👏 Great job! You have solid historical knowledge!";
         messageClass = "bg-blue-100 text-blue-800 border border-blue-200";
-    } else if (percentage >= 50) {
-        message = "📚 Not bad! Keep studying to improve your score!";
+    } else if (percentage >= 30) {
+        message = "📚 Could be better! Keep studying to improve your score!";
         messageClass = "bg-yellow-100 text-yellow-800 border border-yellow-200";
     } else {
-        message = "🎯 Keep practicing! History is full of fascinating dates to learn!";
+        message = "🎯 Auch, not the best! Keep practicing!";
         messageClass = "bg-orange-100 text-orange-800 border border-orange-200";
     }
     
@@ -592,6 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (yearInput) {
         yearInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission or other default behavior
+                e.stopPropagation(); // Prevent event from bubbling to document listener
                 if (answerSubmitted) {
                     nextQuestion();
                 } else {
