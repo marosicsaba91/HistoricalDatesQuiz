@@ -9,10 +9,10 @@
     <!-- Link to custom CSS for fonts and basic styling -->
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex flex-col justify-start md:justify-center items-center p-2 md:p-4 py-4 md:py-8">
 
     <!-- Main Quiz Container -->
-    <div id="quiz-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-blue-600">
+    <div id="quiz-container" class="bg-white p-4 md:p-6 lg:p-10 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-blue-600 my-auto md:my-0">
         <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">
             Historical Date Quiz
         </h1>
@@ -32,8 +32,8 @@
                         <button class="quiz-length-btn px-3 py-2 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition" data-length="3">3</button>
                         <button class="quiz-length-btn px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition" data-length="5">5</button>
                         <button class="quiz-length-btn px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition" data-length="10">10</button>
-                        <button class="quiz-length-btn px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition" data-length="15">15</button>
                         <button class="quiz-length-btn px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition" data-length="30">30</button>
+                        <button class="quiz-length-btn px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition" data-length="100">100</button>
                         <div></div>
                     </div>
                 </div>
