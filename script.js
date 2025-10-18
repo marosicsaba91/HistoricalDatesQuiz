@@ -7,6 +7,7 @@ let currentQuestionIndex = 0;
 let score = 0;
 let shuffledData = [];
 let allData = [];
+let availableTags = [];
 let quizConfig = {
     length: 10,
     tag: ''
@@ -50,6 +51,64 @@ function shuffleArray(array) {
     return array;
 }
 
+// Extract unique tags from data
+function extractTags(data) {
+    const tagSet = new Set();
+    data.forEach(event => {
+        if (event[4] && event[4].trim()) {
+            // Split tags by comma and add each one
+            const tags = event[4].split(',').map(tag => tag.trim()).filter(tag => tag);
+            tags.forEach(tag => tagSet.add(tag));
+        }
+    });
+    return Array.from(tagSet).sort();
+}
+
+// Populate tag dropdown
+function populateTagDropdown(tags, filter = '') {
+    const dropdown = document.getElementById('tag-dropdown');
+    dropdown.innerHTML = '';
+    
+    if (tags.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    
+    // Filter tags based on search
+    const filteredTags = tags.filter(tag => 
+        tag.toLowerCase().includes(filter.toLowerCase())
+    );
+    
+    if (filteredTags.length === 0 && filter) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    
+    // Add "All Events" option
+    const allOption = document.createElement('div');
+    allOption.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm';
+    allOption.textContent = 'All Events';
+    allOption.addEventListener('click', () => {
+        document.getElementById('tag-filter').value = '';
+        dropdown.classList.add('hidden');
+    });
+    dropdown.appendChild(allOption);
+    
+    // Add filtered tags
+    filteredTags.forEach(tag => {
+        const option = document.createElement('div');
+        option.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm';
+        option.textContent = tag;
+        option.addEventListener('click', () => {
+            document.getElementById('tag-filter').value = tag;
+            dropdown.classList.add('hidden');
+        });
+        dropdown.appendChild(option);
+    });
+    
+    dropdown.classList.remove('hidden');
+}
+
 // --- Data Fetching Logic ---
 
 // Exponential backoff mechanism for retries
@@ -84,12 +143,29 @@ function initializeApp() {
     showStartPage();
 }
 
+// Preload tags for dropdown
+async function preloadTags() {
+    if (allData.length === 0) {
+        try {
+            allData = await fetchDataWithRetry(GS_WEB_APP_URL);
+            availableTags = extractTags(allData);
+            console.log('Tags loaded:', availableTags);
+        } catch (error) {
+            console.error('Failed to preload tags:', error);
+            // Continue without tags - user can still type custom filters
+        }
+    }
+}
+
 // Show the start page
 function showStartPage() {
     document.getElementById('start-page').classList.remove('hidden');
     document.getElementById('loading-state').classList.add('hidden');
     document.getElementById('quiz-content').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
+    
+    // Preload tags in background for dropdown
+    preloadTags();
 }
 
 // Load data and start quiz with configuration
@@ -112,6 +188,8 @@ async function startQuizWithConfig() {
         // Fetch data from the deployed Apps Script URL (only if not already loaded)
         if (allData.length === 0) {
             allData = await fetchDataWithRetry(GS_WEB_APP_URL);
+            // Extract tags when data is first loaded
+            availableTags = extractTags(allData);
         }
         
         // Filter and prepare quiz data
@@ -242,7 +320,7 @@ function checkAnswer() {
         feedbackElement.classList.add('text-green-600');
     } else {
         const formattedDate = formatDateForDisplay(correctYear, month, day);
-        feedbackElement.innerHTML = `Incorrect. The correct year was:<br><span class="text-lg font-semibold">${formattedDate}</span>`;
+        feedbackElement.innerHTML = `Incorrect. The correct date was:<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-red-600');
     }
     
@@ -318,6 +396,40 @@ function setupStartPageHandlers() {
         });
     });
     
+    // Tag filter dropdown handlers
+    const tagFilter = document.getElementById('tag-filter');
+    const tagDropdown = document.getElementById('tag-dropdown');
+    
+    if (tagFilter) {
+        // Show dropdown on focus and populate with available tags
+        tagFilter.addEventListener('focus', () => {
+            setTimeout(() => {
+                if (availableTags.length > 0) {
+                    populateTagDropdown(availableTags, tagFilter.value);
+                } else {
+                    // Show loading message if tags not loaded yet
+                    const dropdown = document.getElementById('tag-dropdown');
+                    dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">Loading tags...</div>';
+                    dropdown.classList.remove('hidden');
+                }
+            }, 100);
+        });
+        
+        // Filter dropdown as user types
+        tagFilter.addEventListener('input', (e) => {
+            if (availableTags.length > 0) {
+                populateTagDropdown(availableTags, e.target.value);
+            }
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target !== tagFilter && !tagDropdown.contains(e.target)) {
+                tagDropdown.classList.add('hidden');
+            }
+        });
+    }
+    
     // Start quiz button
     document.getElementById('start-quiz-btn').addEventListener('click', () => {
         quizConfig.tag = document.getElementById('tag-filter').value.trim();
@@ -348,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listeners for quiz content (these elements exist in the DOM initially)
     const checkButton = document.getElementById('check-button');
     const yearInput = document.getElementById('year-input');
+    const quitButton = document.getElementById('quit-quiz-btn');
 
     if (checkButton) {
         checkButton.addEventListener('click', function() {
@@ -355,6 +468,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 nextQuestion();
             } else {
                 checkAnswer();
+            }
+        });
+    }
+    
+    if (quitButton) {
+        quitButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to quit and return to setup? Your progress will be lost.')) {
+                showStartPage();
             }
         });
     }
