@@ -4,4 +4,56 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: #f7f9fb;
 }
-/* You can add more custom styles here if needed */
+
+/* Progress bar initial width */
+#progress-bar {
+    width: 0;
+}
+
+/* Hover effects for quiz length buttons */
+.quiz-length-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Start page animations */
+#start-page {
+    animation: fadeIn 0.5s ease-in;
+}
+
+#end-screen {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Performance message styling */
+#performance-message {
+    font-weight: 600;
+    animation: slideIn 0.5s ease-out 0.2s both;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Enhanced button hover effects */
+button:hover {
+    transition: all 0.15s ease;
+}

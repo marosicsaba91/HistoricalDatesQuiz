@@ -2,9 +2,15 @@
 // Use the URL you obtained after deploying your Code.gs script as a Web App (Access: Anyone).
 const GS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxkB3hlgP07tZH-m6kQ_2sldUWpmKsNmlIq54PM4F5RXTAPMzugWK-S1G64q1VrD5-e7g/exec"; 
 
+// Quiz state variables
 let currentQuestionIndex = 0;
 let score = 0;
 let shuffledData = [];
+let allData = [];
+let quizConfig = {
+    length: 10,
+    tag: ''
+};
 
 // Utility to shuffle the array
 function shuffleArray(array) {
@@ -44,12 +50,28 @@ async function fetchDataWithRetry(url, maxRetries = 3) {
     }
 }
 
-async function initializeQuiz() {
+// Initialize app - show start page
+function initializeApp() {
+    showStartPage();
+}
+
+// Show the start page
+function showStartPage() {
+    document.getElementById('start-page').classList.remove('hidden');
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('quiz-content').classList.add('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
+}
+
+// Load data and start quiz with configuration
+async function startQuizWithConfig() {
     const loadingElement = document.getElementById('loading-state');
     
-    // Show loading state
+    // Hide start page and show loading
+    document.getElementById('start-page').classList.add('hidden');
     loadingElement.classList.remove('hidden');
     document.getElementById('quiz-content').classList.add('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
     
     // Check for placeholder URL
     if (GS_WEB_APP_URL.includes("YOUR_APPS_SCRIPT_WEB_APP_URL_HERE")) {
@@ -58,19 +80,40 @@ async function initializeQuiz() {
     }
 
     try {
-        // Fetch data from the deployed Apps Script URL
-        const data = await fetchDataWithRetry(GS_WEB_APP_URL);
+        // Fetch data from the deployed Apps Script URL (only if not already loaded)
+        if (allData.length === 0) {
+            allData = await fetchDataWithRetry(GS_WEB_APP_URL);
+        }
         
-        // Shuffle data and start quiz
-        shuffledData = shuffleArray(data.slice());
+        // Filter and prepare quiz data
+        let filteredData = allData.slice();
+        
+        // Apply tag filter if specified
+        if (quizConfig.tag && quizConfig.tag.trim()) {
+            const tagLower = quizConfig.tag.trim().toLowerCase();
+            filteredData = allData.filter(event => 
+                event[0].toLowerCase().includes(tagLower) || 
+                (event[3] && event[3].toLowerCase().includes(tagLower))
+            );
+        }
+        
+        if (filteredData.length === 0) {
+            displayError(`No events found matching "${quizConfig.tag}". Please try a different tag or leave it empty.`);
+            return;
+        }
+        
+        // Shuffle and limit data based on quiz length
+        shuffledData = shuffleArray(filteredData.slice());
+        shuffledData = shuffledData.slice(0, Math.min(quizConfig.length, shuffledData.length));
+        
+        // Reset quiz state
+        currentQuestionIndex = 0;
+        score = 0;
+        
+        // Show quiz content and start
         loadingElement.classList.add('hidden');
         document.getElementById('quiz-content').classList.remove('hidden');
         
-        if (shuffledData.length === 0) {
-            displayError("Data loaded successfully, but the quiz list is empty. Check your Google Sheet data range and row count.");
-            return;
-        }
-
         loadQuestion();
 
     } catch (error) {
@@ -80,21 +123,33 @@ async function initializeQuiz() {
 
 function displayError(message) {
     const loadingElement = document.getElementById('loading-state');
+    document.getElementById('start-page').classList.add('hidden');
+    document.getElementById('quiz-content').classList.add('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
     loadingElement.classList.remove('hidden');
     loadingElement.innerHTML = `
         <div class="text-center p-8 bg-red-50 border border-red-200 rounded-lg">
             <h2 class="text-xl font-bold text-red-700 mb-4">Error Loading Data</h2>
             <p class="text-sm text-red-600">${message}</p>
-            <button id="restart-button" 
-                    class="mt-4 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-150"
-                    onclick="window.location.reload()">
-                Try Again
+            <button id="back-to-start" 
+                    class="mt-4 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-150">
+                Back to Start
             </button>
         </div>
     `;
-    document.getElementById('quiz-content').classList.add('hidden');
+    
+    // Add event listener for back to start button
+    document.getElementById('back-to-start').addEventListener('click', () => {
+        loadingElement.innerHTML = `
+            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p>Loading quiz events from Google Sheet...</p>
+        `;
+        showStartPage();
+    });
 }
-
 
 // --- Quiz Flow Logic ---
 
@@ -107,7 +162,7 @@ function loadQuestion() {
     const currentEvent = shuffledData[currentQuestionIndex];
     document.getElementById('event-text').textContent = currentEvent[0];
     document.getElementById('score-display').textContent = `Score: ${score} / ${currentQuestionIndex}`;
-    document.getElementById('feedback').textContent = "Enter the year (negative for BC)";
+    document.getElementById('feedback').textContent = "(use negative numbers for BC)";
     document.getElementById('feedback').classList.remove('text-green-600', 'text-red-600');
     document.getElementById('feedback').classList.add('text-gray-500');
     document.getElementById('year-input').value = '';
@@ -157,24 +212,88 @@ function checkAnswer() {
 }
 
 function showResults() {
-    document.getElementById('quiz-content').innerHTML = `
-        <div class="text-center p-8">
-            <h2 class="text-3xl font-bold text-gray-800 mb-4">Quiz Finished!</h2>
-            <p class="text-5xl font-extrabold text-blue-600">${score}/${shuffledData.length}</p>
-            <p class="text-lg text-gray-600 mt-2">You scored ${score} out of ${shuffledData.length} events.</p>
-            <button id="restart-button" 
-                    class="mt-6 w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02]"
-                    onclick="window.location.reload()">
-                Restart Quiz
-            </button>
-        </div>
-    `;
+    // Hide quiz content and show end screen
+    document.getElementById('quiz-content').classList.add('hidden');
+    document.getElementById('end-screen').classList.remove('hidden');
+    
+    // Calculate percentage
+    const percentage = Math.round((score / shuffledData.length) * 100);
+    
+    // Update score display
+    document.getElementById('final-score').textContent = `${score}/${shuffledData.length}`;
+    document.getElementById('score-percentage').textContent = `${percentage}% Correct`;
+    
+    // Show performance message based on score
+    const messageElement = document.getElementById('performance-message');
+    let message, messageClass;
+    
+    if (percentage >= 90) {
+        message = "🌟 Outstanding! You're a history expert!";
+        messageClass = "bg-green-100 text-green-800 border border-green-200";
+    } else if (percentage >= 70) {
+        message = "👏 Great job! You have solid historical knowledge!";
+        messageClass = "bg-blue-100 text-blue-800 border border-blue-200";
+    } else if (percentage >= 50) {
+        message = "📚 Not bad! Keep studying to improve your score!";
+        messageClass = "bg-yellow-100 text-yellow-800 border border-yellow-200";
+    } else {
+        message = "🎯 Keep practicing! History is full of fascinating dates to learn!";
+        messageClass = "bg-orange-100 text-orange-800 border border-orange-200";
+    }
+    
+    messageElement.textContent = message;
+    messageElement.className = `mb-6 p-4 rounded-lg ${messageClass}`;
+}
+
+// Event handlers for start page
+function setupStartPageHandlers() {
+    // Quiz length selection buttons
+    const lengthButtons = document.querySelectorAll('.quiz-length-btn');
+    lengthButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons
+            lengthButtons.forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+                btn.classList.add('border-gray-300');
+            });
+            
+            // Add active class to clicked button
+            button.classList.remove('border-gray-300');
+            button.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+            
+            // Update config
+            quizConfig.length = parseInt(button.dataset.length);
+        });
+    });
+    
+    // Start quiz button
+    document.getElementById('start-quiz-btn').addEventListener('click', () => {
+        quizConfig.tag = document.getElementById('tag-filter').value.trim();
+        startQuizWithConfig();
+    });
+}
+
+// Event handlers for end screen
+function setupEndScreenHandlers() {
+    document.getElementById('restart-same-quiz').addEventListener('click', () => {
+        // Restart with same configuration
+        startQuizWithConfig();
+    });
+    
+    document.getElementById('new-quiz-btn').addEventListener('click', () => {
+        showStartPage();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeQuiz();
+    // Initialize app
+    initializeApp();
     
-    // Event listeners attached to elements that exist in the DOM initially
+    // Setup all event handlers
+    setupStartPageHandlers();
+    setupEndScreenHandlers();
+    
+    // Event listeners for quiz content (these elements exist in the DOM initially)
     const checkButton = document.getElementById('check-button');
     const yearInput = document.getElementById('year-input');
 
