@@ -1,0 +1,7 @@
+/* Custom font for a clean, modern look */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f7f9fb;
+}
+/* You can add more custom styles here if needed */
