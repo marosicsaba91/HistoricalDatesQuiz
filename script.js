@@ -1,6 +1,6 @@
 // *** IMPORTANT: YOUR APPS SCRIPT URL GOES HERE ***
 // Use the URL you obtained after deploying your Code.gs script as a Web App (Access: Anyone).
-const GS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxkB3hlgP07tZH-m6kQ_2sldUWpmKsNmlIq54PM4F5RXTAPMzugWK-S1G64q1VrD5-e7g/exec"; 
+const GS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzjjAofqch230aw2FLqbkzZXqOEk2eIS8xge2XOWdWiRJd6NNLIXNR73T2o4EzJHnIx2A/exec"; 
 
 // Quiz state variables
 let currentQuestionIndex = 0;
@@ -11,6 +11,35 @@ let quizConfig = {
     length: 10,
     tag: ''
 };
+let answerSubmitted = false;
+
+// Utility to format date for display
+function formatDateForDisplay(year, month, day) {
+    const absYear = Math.abs(year);
+    const era = year < 0 ? ' BC' : '';
+    
+    // If no month or day provided, just return year
+    if (!month || !day) {
+        return `${absYear}${era}`;
+    }
+    
+    // Convert month number to month name
+    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const monthNum = parseInt(month);
+    const dayNum = parseInt(day);
+    
+    // Validate month and day
+    if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+        const monthName = months[monthNum];
+        const dayFormatted = dayNum.toString().padStart(2, '0');
+        return `${absYear}${era} ${monthName} ${dayFormatted}`;
+    }
+    
+    // If invalid month/day, just return year
+    return `${absYear}${era}`;
+}
 
 // Utility to shuffle the array
 function shuffleArray(array) {
@@ -93,7 +122,7 @@ async function startQuizWithConfig() {
             const tagLower = quizConfig.tag.trim().toLowerCase();
             filteredData = allData.filter(event => 
                 event[0].toLowerCase().includes(tagLower) || 
-                (event[3] && event[3].toLowerCase().includes(tagLower))
+                (event[4] && event[4].toLowerCase().includes(tagLower))
             );
         }
         
@@ -161,12 +190,24 @@ function loadQuestion() {
 
     const currentEvent = shuffledData[currentQuestionIndex];
     document.getElementById('event-text').textContent = currentEvent[0];
-    document.getElementById('score-display').textContent = `Score: ${score} / ${currentQuestionIndex}`;
+    
+    // Update question counter and score
+    document.getElementById('question-counter').textContent = `Question ${currentQuestionIndex + 1}/${shuffledData.length}`;
+    document.getElementById('score-display').textContent = `Score: ${score}/${currentQuestionIndex}`;
+    
     document.getElementById('feedback').textContent = "(use negative numbers for BC)";
     document.getElementById('feedback').classList.remove('text-green-600', 'text-red-600');
     document.getElementById('feedback').classList.add('text-gray-500');
-    document.getElementById('year-input').value = '';
-    document.getElementById('year-input').focus();
+    
+    // Reset input and button state
+    const yearInput = document.getElementById('year-input');
+    const checkButton = document.getElementById('check-button');
+    
+    yearInput.value = '';
+    yearInput.disabled = false;
+    yearInput.focus();
+    checkButton.textContent = 'Check';
+    answerSubmitted = false;
 
     // Update progress bar
     const progress = (currentQuestionIndex / shuffledData.length) * 100;
@@ -177,11 +218,13 @@ function checkAnswer() {
     const input = document.getElementById('year-input').value.trim();
     const currentEvent = shuffledData[currentQuestionIndex];
     const correctYear = currentEvent[1];
-    const exactDate = currentEvent[2];
+    const month = currentEvent[2];
+    const day = currentEvent[3];
     const inputNumber = parseInt(input, 10);
 
-    if (isNaN(inputNumber)) {
-        document.getElementById('feedback').textContent = "Please enter a valid number.";
+    // Check if input is a valid integer (no decimals, no non-numeric characters)
+    if (isNaN(inputNumber) || input.includes('.') || inputNumber.toString() !== input) {
+        document.getElementById('feedback').innerHTML = "Please enter a valid integer (whole number only).";
         document.getElementById('feedback').classList.remove('text-green-600', 'text-gray-500');
         document.getElementById('feedback').classList.add('text-red-600');
         return;
@@ -194,21 +237,30 @@ function checkAnswer() {
 
     if (isCorrect) {
         score++;
-        feedbackElement.textContent = `Correct! ${Math.abs(correctYear)} ${correctYear < 0 ? 'BC' : 'AD'}${exactDate ? ' (' + exactDate + ')' : ''}`;
+        const formattedDate = formatDateForDisplay(correctYear, month, day);
+        feedbackElement.innerHTML = `Correct!<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-green-600');
     } else {
-        let yearString = Math.abs(correctYear);
-        yearString += (correctYear < 0 ? ' BC' : ' AD');
-        feedbackElement.textContent = `Incorrect. The correct year was ${yearString}${exactDate ? ' (' + exactDate + ')' : ''}`;
+        const formattedDate = formatDateForDisplay(correctYear, month, day);
+        feedbackElement.innerHTML = `Incorrect. The correct year was:<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-red-600');
     }
+    
+    console.log('Feedback set to:', feedbackElement.textContent);
 
-    // Move to the next question after a brief delay
-    document.getElementById('year-input').blur(); // Remove focus
-    setTimeout(() => {
-        currentQuestionIndex++;
-        loadQuestion();
-    }, 1500);
+    // Change button to "Next" and disable input
+    const checkButton = document.getElementById('check-button');
+    const yearInput = document.getElementById('year-input');
+    
+    checkButton.textContent = 'Next';
+    answerSubmitted = true;
+    yearInput.disabled = true;
+    yearInput.blur();
+}
+
+function nextQuestion() {
+    currentQuestionIndex++;
+    loadQuestion();
 }
 
 function showResults() {
@@ -298,14 +350,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearInput = document.getElementById('year-input');
 
     if (checkButton) {
-        checkButton.addEventListener('click', checkAnswer);
+        checkButton.addEventListener('click', function() {
+            if (answerSubmitted) {
+                nextQuestion();
+            } else {
+                checkAnswer();
+            }
+        });
     }
     
     if (yearInput) {
         yearInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                checkAnswer();
+                if (answerSubmitted) {
+                    nextQuestion();
+                } else {
+                    checkAnswer();
+                }
+            }
+        });
+        
+        // Allow only integer input (including negative)
+        yearInput.addEventListener('input', function(e) {
+            let value = this.value;
+            
+            // Allow only digits and one minus sign at the beginning
+            // First, remove any characters that aren't digits or minus
+            value = value.replace(/[^\d-]/g, '');
+            
+            // Handle minus signs: only allow one at the beginning
+            if (value.includes('-')) {
+                // Remove all minus signs
+                const digitsOnly = value.replace(/-/g, '');
+                // Add back one minus at the start if there was one
+                if (value.indexOf('-') === 0) {
+                    value = '-' + digitsOnly;
+                } else {
+                    value = digitsOnly;
+                }
+            }
+            
+            // Update the input if it changed
+            if (this.value !== value) {
+                this.value = value;
             }
         });
     }
+    
+    // Also handle Enter key when input is disabled (for next question)
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && answerSubmitted) {
+            nextQuestion();
+        }
+    });
 });

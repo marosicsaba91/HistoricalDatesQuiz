@@ -65,6 +65,12 @@
 
         <!-- Quiz Content (Shown after data loads) -->
         <div id="quiz-content" class="hidden">
+            <!-- Question Counter -->
+            <div class="flex justify-between items-center mb-2">
+                <p id="question-counter" class="text-sm font-medium text-gray-600">Question 1/10</p>
+                <p id="score-display" class="text-sm font-medium text-gray-700">Score: 0/0</p>
+            </div>
+            
             <!-- Progress Bar -->
             <div class="mb-4">
                 <div class="h-2 bg-gray-200 rounded-full">
@@ -80,18 +86,17 @@
             <!-- Input Area -->
             <div class="space-y-4">
                 <div class="flex items-center space-x-2">
-                    <input type="number" id="year-input" placeholder="Enter Year"
+                    <input type="number" id="year-input" placeholder="Enter Year" step="1"
                         class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-                        inputmode="numeric" pattern="[0-9]*">
+                        inputmode="numeric" pattern="[0-9-]*">
                     <button id="check-button"
                             class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.05]">
                         Check
                     </button>
                 </div>
                 
-                <!-- Feedback and Score -->
+                <!-- Feedback -->
                 <p id="feedback" class="text-center text-sm text-gray-500 min-h-[1.5rem]"></p>
-                <p id="score-display" class="text-center text-sm font-medium text-gray-700"></p>
             </div>
         </div>
 
