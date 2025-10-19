@@ -406,7 +406,7 @@ function checkAnswer() {
     // Check if input is a valid positive integer (since we handle BC with toggle)
     if (isNaN(inputNumber) || input.includes('.') || input.includes('-') || parseInt(input, 10) <= 0) {
                     document.getElementById('feedback').classList.remove('hidden');
-        document.getElementById('feedback').innerHTML = "Please enter a valid positive year number.";
+        document.getElementById('feedback').innerHTML = "Please enter a valid year number.";
         document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-gray-500');
         document.getElementById('feedback').classList.add('text-red-600');
         return;
@@ -433,7 +433,7 @@ function checkAnswer() {
     feedbackElement.classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600', 'text-gray-500');
 
     const formattedDate = formatDateForDisplay(correctYear, month, day);
-    
+
     if (isCorrect) {
         feedbackElement.innerHTML = `Perfect! ${pointsEarned} points<br><span class="text-lg font-semibold">${formattedDate}</span>`;
         feedbackElement.classList.add('text-green-600');

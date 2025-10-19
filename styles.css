@@ -5,6 +5,27 @@ body {
     background-color: #f7f9fb;
 }
 
+/* Mobile keyboard optimization */
+@media (max-width: 768px) {
+    body {
+        min-height: 100vh;
+        min-height: 100dvh; /* Dynamic viewport height for better mobile support */
+        padding: 0.5rem !important;
+    }
+    
+    /* Prevent horizontal scroll on mobile */
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
+    }
+    
+    /* Ensure quiz container doesn't cause overflow */
+    #quiz-container {
+        max-width: calc(100vw - 1rem);
+    }
+}
+
 /* Progress bar initial width */
 #progress-bar {
     width: 0;
