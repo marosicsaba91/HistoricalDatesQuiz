@@ -684,9 +684,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Allow only digit input
+        // Allow only digit input and handle minus for mobile keyboards
         yearInput.addEventListener('input', function(e) {
             let value = this.value;
+            
+            // Check if user typed a minus sign (mobile keyboard support)
+            if (value.includes('-')) {
+                // Toggle to BC if currently AD
+                const bcToggle = document.getElementById('bc-toggle');
+                if (bcToggle && bcToggle.textContent === 'AD') {
+                    bcToggle.textContent = 'BC';
+                    bcToggle.classList.remove('border-gray-300', 'bg-white');
+                    bcToggle.classList.add('bg-blue-600', 'text-white', 'border-blue-500');
+                }
+            }
             
             // Allow only digits
             value = value.replace(/[^\d]/g, '');
