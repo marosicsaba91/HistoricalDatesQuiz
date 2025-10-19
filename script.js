@@ -361,19 +361,27 @@ function loadQuestion() {
     const maxPossiblePoints = currentQuestionIndex * 10; // 10 points per question
     document.getElementById('score-display').textContent = `Score: ${score}/${maxPossiblePoints} pts`;
     
-    document.getElementById('feedback').textContent = "(use negative numbers for BC)";
-    document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600');
-    document.getElementById('feedback').classList.add('text-gray-500');
+    // Hide feedback element initially
+    document.getElementById('feedback').classList.add('hidden');
+    document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600', 'text-gray-500');
     
     // Reset input and button state
     const yearInput = document.getElementById('year-input');
     const checkButton = document.getElementById('check-button');
+    const bcToggle = document.getElementById('bc-toggle');
     
     yearInput.value = '';
     yearInput.disabled = false;
     yearInput.focus();
     checkButton.textContent = 'Check';
     answerSubmitted = false;
+    
+    // Reset BC toggle to AD
+    if (bcToggle) {
+        bcToggle.textContent = 'AD';
+        bcToggle.classList.remove('border-blue-500', 'bg-blue-600', 'text-white');
+        bcToggle.classList.add('border-gray-300', 'bg-white');
+    }
 
     // Update progress bar
     const progress = (currentQuestionIndex / shuffledData.length) * 100;
@@ -382,15 +390,33 @@ function loadQuestion() {
 
 function checkAnswer() {
     const input = document.getElementById('year-input').value.trim();
+    const bcToggle = document.getElementById('bc-toggle');
+    const isBC = bcToggle.textContent === 'BC';
     const currentEvent = shuffledData[currentQuestionIndex];
     const correctYear = currentEvent[1];
     const month = currentEvent[2];
     const day = currentEvent[3];
-    const inputNumber = parseInt(input, 10);
+    
+    // Parse input and convert to negative if BC is selected
+    let inputNumber = parseInt(input, 10);
+    if (isBC && inputNumber > 0) {
+        inputNumber = -inputNumber;
+    }
 
-    // Check if input is a valid integer (no decimals, no non-numeric characters)
-    if (isNaN(inputNumber) || input.includes('.') || inputNumber.toString() !== input) {
-        document.getElementById('feedback').innerHTML = "Please enter a valid integer (whole number only).";
+    // Check if input is a valid positive integer (since we handle BC with toggle)
+    if (isNaN(inputNumber) || input.includes('.') || input.includes('-') || parseInt(input, 10) <= 0) {
+                    document.getElementById('feedback').classList.remove('hidden');
+        document.getElementById('feedback').innerHTML = "Please enter a valid positive year number.";
+        document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-gray-500');
+        document.getElementById('feedback').classList.add('text-red-600');
+        return;
+    }
+
+    // Check if year is not in the future (only for AD years)
+    const currentYear = new Date().getFullYear();
+    if (!isBC && parseInt(input, 10) > currentYear) {
+        document.getElementById('feedback').classList.remove('hidden');
+        document.getElementById('feedback').innerHTML = `Please enter a year not later than ${currentYear}.`;
         document.getElementById('feedback').classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-gray-500');
         document.getElementById('feedback').classList.add('text-red-600');
         return;
@@ -403,6 +429,7 @@ function checkAnswer() {
     score += pointsEarned; // Add points to total score
 
     const feedbackElement = document.getElementById('feedback');
+    feedbackElement.classList.remove('hidden'); // Show feedback element
     feedbackElement.classList.remove('text-green-600', 'text-orange-600', 'text-yellow-600', 'text-red-600', 'text-gray-500');
 
     const formattedDate = formatDateForDisplay(correctYear, month, day);
@@ -589,6 +616,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // BC Toggle functionality
+    const bcToggle = document.getElementById('bc-toggle');
+    if (bcToggle) {
+        bcToggle.addEventListener('click', function() {
+            const currentText = this.textContent;
+            if (currentText === 'AD') {
+                this.textContent = 'BC';
+                this.classList.remove('border-gray-300', 'bg-white');
+                this.classList.add('bg-blue-600', 'text-white', 'border-blue-500');
+            } else {
+                this.textContent = 'AD';
+                this.classList.remove('bg-blue-600', 'text-white', 'border-blue-500');
+                this.classList.add('border-gray-300', 'bg-white');
+            }
+        });
+    }
+    
     if (yearInput) {
         yearInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -602,25 +646,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Allow only integer input (including negative)
+        // Handle minus key for BC toggle and block non-numeric input
+        yearInput.addEventListener('keydown', function(e) {
+            // Allow navigation and editing keys
+            const allowedKeys = [
+                'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+                'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                'Home', 'End', 'PageUp', 'PageDown'
+            ];
+            
+            // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            if (e.ctrlKey && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+                return;
+            }
+            
+            // Handle minus key for BC toggle
+            if (e.key === '-' || e.key === 'Minus') {
+                e.preventDefault();
+                
+                // Toggle to BC if currently AD
+                const bcToggle = document.getElementById('bc-toggle');
+                if (bcToggle && bcToggle.textContent === 'AD') {
+                    bcToggle.textContent = 'BC';
+                    bcToggle.classList.remove('border-gray-300', 'bg-white');
+                    bcToggle.classList.add('bg-blue-600', 'text-white', 'border-blue-500');
+                } else {
+                    bcToggle.textContent = 'AD';
+                    bcToggle.classList.remove('bg-blue-600', 'text-white', 'border-blue-500');
+                    bcToggle.classList.add('border-gray-300', 'bg-white');
+                }
+                return;
+            }
+            
+            // Allow only digits (0-9) and allowed navigation keys
+            if (!allowedKeys.includes(e.key) && (e.key < '0' || e.key > '9')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Allow only digit input
         yearInput.addEventListener('input', function(e) {
             let value = this.value;
             
-            // Allow only digits and one minus sign at the beginning
-            // First, remove any characters that aren't digits or minus
-            value = value.replace(/[^\d-]/g, '');
-            
-            // Handle minus signs: only allow one at the beginning
-            if (value.includes('-')) {
-                // Remove all minus signs
-                const digitsOnly = value.replace(/-/g, '');
-                // Add back one minus at the start if there was one
-                if (value.indexOf('-') === 0) {
-                    value = '-' + digitsOnly;
-                } else {
-                    value = digitsOnly;
-                }
-            }
+            // Allow only digits
+            value = value.replace(/[^\d]/g, '');
             
             // Update the input if it changed
             if (this.value !== value) {

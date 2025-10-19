@@ -116,9 +116,16 @@
 
             <!-- Input Area -->
             <div class="space-y-4">
-                <input type="number" id="year-input" placeholder="Enter Year" step="1"
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-                    inputmode="numeric" pattern="[0-9-]*">
+                <div class="flex space-x-2">
+                    <input type="number" id="year-input" placeholder="Enter Year" step="1" min="1"
+                        class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
+                        inputmode="numeric">
+                    <button id="bc-toggle" type="button"
+                            class="px-4 py-3 border-2 border-gray-300 rounded-lg text-sm font-medium hover:border-blue-500 transition bg-white"
+                            title="Toggle BC/AD">
+                        AD
+                    </button>
+                </div>
                 
                 <button id="check-button"
                         class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.05]">
